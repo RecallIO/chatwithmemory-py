@@ -1,8 +1,13 @@
 # RecallIO Chat
 
+
 This project provides a simple desktop chat application built with Tkinter. It connects to OpenAI and RecallIO, storing your messages and recalling summarized memories relevant to your input.
 
 ## Setup
+=======
+This project offers a small web chat that connects to OpenAI and RecallIO. A Flask backend handles the chat logic while a simple Next.js UI provides a modern interface.
+
+## Backend
 
 1. Install Python dependencies:
    ```bash

@@ -112,7 +112,6 @@ class ChatApp:
             return
         self.append_chat('Assistant', reply)
 
-
 def main():
     try:
         cfg = load_config()
