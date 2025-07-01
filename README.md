@@ -25,4 +25,3 @@ This project offers a small web chat that connects to OpenAI and RecallIO. A Fla
    npm run dev
    ```
 3. Open the shown URL in your browser and start chatting.
-
