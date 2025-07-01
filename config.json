@@ -1,0 +1,10 @@
+{
+  "openai": {
+    "api_key": ""
+  },
+  "recallio": {
+    "api_key": "",
+    "project_id": "",
+    "user_id": "default_user"
+  }
+}
