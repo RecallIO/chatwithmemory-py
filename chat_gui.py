@@ -68,14 +68,6 @@ class ChatApp:
         self.entry.delete(0, tk.END)
         self.append_chat('You', user_text)
 
-        try:
-            self.recall_client.write_memory(
-                MemoryWriteRequest(userId=self.user_id, projectId=self.project_id, content=user_text, consentFlag=True)
-            )
-        except Exception as e:
-            self.append_chat('Error', f'RecallIO write failed: {e}')
-            return
-
         summary_text = ''
         try:
             recall_req = MemoryRecallRequest(
@@ -84,7 +76,7 @@ class ChatApp:
                 query=user_text,
                 scope='user',
                 summarized=True,
-                similarityThreshold=0.5,
+                similarityThreshold=0.2,
                 limit=10,
             )
             memories = self.recall_client.recall_memory(recall_req)
@@ -111,6 +103,15 @@ class ChatApp:
             self.append_chat('Error', f'OpenAI error: {e}')
             return
         self.append_chat('Assistant', reply)
+
+        try:
+            self.recall_client.write_memory(
+                MemoryWriteRequest(userId=self.user_id, projectId=self.project_id, content=user_text, consentFlag=True)
+            )
+        except Exception as e:
+            self.append_chat('Error', f'RecallIO write failed: {e}')
+            return
+
 
 def main():
     try:
