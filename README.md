@@ -1,16 +1,28 @@
-# Chat with RecallIO GUI
+# RecallIO Chat
 
-This project provides a simple Python GUI chat application that interacts with OpenAI and RecallIO.
+This project offers a small web chat that connects to OpenAI and RecallIO. A Flask backend handles the chat logic while a simple Next.js UI provides a modern interface.
 
-## Usage
+## Backend
 
-1. Install dependencies:
+1. Install Python dependencies:
    ```bash
    pip install -r requirements.txt
    ```
-2. Fill out `config.json` with your API keys and project ID.
-3. Run the application:
+2. Fill out `config.json` with your OpenAI and RecallIO credentials.
+3. Start the Flask server:
    ```bash
-   python chat_gui.py
+   python server.py
    ```
+
+## Frontend
+
+1. From the `frontend` directory install packages:
+   ```bash
+   npm install
+   ```
+2. Start the development server:
+   ```bash
+   npm run dev
+   ```
+3. Open the shown URL in your browser and start chatting.
 
