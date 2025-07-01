@@ -1,71 +1,80 @@
-import tkinter as tk
-from tkinter import ttk, scrolledtext, messagebox
 import json
-import openai
+import tkinter as tk
+from tkinter import scrolledtext
 from recallio import RecallioClient, MemoryWriteRequest, MemoryRecallRequest, RecallioAPIError
+import openai
 
 CONFIG_FILE = 'config.json'
 
 
 def load_config():
     with open(CONFIG_FILE, 'r') as f:
-        config = json.load(f)
-    if 'openai' not in config or not config['openai'].get('api_key'):
+        cfg = json.load(f)
+    if not cfg.get('openai', {}).get('api_key'):
         raise ValueError('OpenAI API key missing in config.json')
-    recall_cfg = config.get('recallio', {})
-    if not recall_cfg.get('api_key') or not recall_cfg.get('project_id'):
-        raise ValueError('RecallIO configuration missing in config.json')
-    return config
+    rc = cfg.get('recallio', {})
+    if not rc.get('api_key') or not rc.get('project_id'):
+        raise ValueError('RecallIO configuration incomplete in config.json')
+    return cfg
 
 
-def create_clients(cfg):
-    openai_client = openai.OpenAI(api_key=cfg['openai']['api_key'])
-    recall_client = RecallioClient(api_key=cfg['recallio']['api_key'])
-    return openai_client, recall_client
-
-
-class ChatGUI:
-    def __init__(self, root, openai_client, recall_client, cfg):
+class ChatApp:
+    def __init__(self, root, cfg):
         self.root = root
-        self.openai_client = openai_client
-        self.recall_client = recall_client
+        self.cfg = cfg
+        self.openai_client = openai.OpenAI(api_key=cfg['openai']['api_key'])
+        self.recall_client = RecallioClient(api_key=cfg['recallio']['api_key'])
         self.project_id = cfg['recallio']['project_id']
         self.user_id = cfg['recallio'].get('user_id', 'default_user')
+        self._build_ui()
 
-        root.title("RecallIO Chat")
-        root.geometry("600x400")
+    def _build_ui(self):
+        self.root.title('RecallIO Chat')
+        self.root.geometry('600x600')
+        self.root.configure(bg='#f5f5f5')
 
-        self.text_area = scrolledtext.ScrolledText(root, wrap=tk.WORD, state='disabled')
-        self.text_area.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        self.chat_area = scrolledtext.ScrolledText(self.root, wrap=tk.WORD, height=20, bg='white')
+        self.chat_area.configure(state='disabled')
+        self.chat_area.pack(padx=10, pady=10, fill='both', expand=True)
 
-        bottom = ttk.Frame(root)
-        bottom.pack(fill=tk.X, padx=10, pady=5)
+        tk.Label(self.root, text='Recalled summary:', bg='#f5f5f5', fg='#333').pack(anchor='w', padx=10)
+        self.recall_area = tk.Text(self.root, height=4, bg='#eef', wrap=tk.WORD)
+        self.recall_area.configure(state='disabled')
+        self.recall_area.pack(padx=10, pady=(0, 10), fill='x')
 
-        self.entry = ttk.Entry(bottom)
-        self.entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        input_frame = tk.Frame(self.root, bg='#f5f5f5')
+        input_frame.pack(padx=10, pady=10, fill='x')
+        self.entry = tk.Entry(input_frame)
+        self.entry.pack(side='left', fill='x', expand=True, padx=(0, 5))
         self.entry.bind('<Return>', self.send_message)
+        tk.Button(input_frame, text='Send', command=self.send_message).pack(side='right')
 
-        send_btn = ttk.Button(bottom, text="Send", command=self.send_message)
-        send_btn.pack(side=tk.RIGHT)
+    def append_chat(self, sender, text):
+        self.chat_area.configure(state='normal')
+        self.chat_area.insert(tk.END, f"{sender}: {text}\n")
+        self.chat_area.configure(state='disabled')
+        self.chat_area.yview(tk.END)
 
-    def append_text(self, speaker, text):
-        self.text_area.configure(state='normal')
-        self.text_area.insert(tk.END, f"{speaker}: {text}\n")
-        self.text_area.configure(state='disabled')
-        self.text_area.see(tk.END)
+    def update_recall(self, text):
+        self.recall_area.configure(state='normal')
+        self.recall_area.delete('1.0', tk.END)
+        self.recall_area.insert(tk.END, text)
+        self.recall_area.configure(state='disabled')
 
     def send_message(self, event=None):
         user_text = self.entry.get().strip()
         if not user_text:
             return
         self.entry.delete(0, tk.END)
-        self.append_text('You', user_text)
+        self.append_chat('You', user_text)
 
         try:
-            write_req = MemoryWriteRequest(userId=self.user_id, projectId=self.project_id, content=user_text, consentFlag=True)
-            self.recall_client.write_memory(write_req)
+            self.recall_client.write_memory(
+                MemoryWriteRequest(userId=self.user_id, projectId=self.project_id, content=user_text, consentFlag=True)
+            )
         except Exception as e:
-            messagebox.showerror('RecallIO Write Error', str(e))
+            self.append_chat('Error', f'RecallIO write failed: {e}')
+            return
 
         summary_text = ''
         try:
@@ -76,16 +85,19 @@ class ChatGUI:
                 scope='user',
                 summarized=True,
                 similarityThreshold=0.5,
+                limit=10,
             )
             memories = self.recall_client.recall_memory(recall_req)
             if memories:
-                summary = memories[0]
-                if summary.content:
-                    summary_text = summary.content
-        except RecallioAPIError as e:
-            messagebox.showwarning('RecallIO Recall Error', str(e))
+                first = memories[0]
+                summary_text = getattr(first, 'content', '') or getattr(first, 'summary', '')
+        except RecallioAPIError:
+            summary_text = ''
         except Exception as e:
-            messagebox.showwarning('RecallIO Error', str(e))
+            self.append_chat('Error', f'RecallIO recall failed: {e}')
+            return
+        if summary_text:
+            self.update_recall(summary_text)
 
         messages = []
         if summary_text:
@@ -94,26 +106,21 @@ class ChatGUI:
 
         try:
             response = self.openai_client.chat.completions.create(model='gpt-3.5-turbo', messages=messages)
-            reply = response.choices[0].message.content
-            self.append_text('Assistant', reply)
-            try:
-                self.recall_client.write_memory(MemoryWriteRequest(userId=self.user_id, projectId=self.project_id, content=reply, consentFlag=True))
-            except Exception as e:
-                messagebox.showwarning('RecallIO Write Error', str(e))
+            reply = response.choices[0].message.content.strip()
         except Exception as e:
-            messagebox.showerror('OpenAI Error', str(e))
-
+            self.append_chat('Error', f'OpenAI error: {e}')
+            return
+        self.append_chat('Assistant', reply)
 
 def main():
     try:
         cfg = load_config()
-        openai_client, recall_client = create_clients(cfg)
     except Exception as e:
-        messagebox.showerror('Configuration Error', str(e))
+        print(f'Configuration Error: {e}')
         return
 
     root = tk.Tk()
-    app = ChatGUI(root, openai_client, recall_client, cfg)
+    ChatApp(root, cfg)
     root.mainloop()
 
 
