@@ -1,2 +1,3 @@
 openai
-recallio
+recallio==1.1.2
+

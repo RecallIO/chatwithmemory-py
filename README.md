@@ -1,7 +1,7 @@
 # RecallIO Chat
 
 
-This project provides a simple desktop chat application built with Tkinter. It connects to OpenAI and RecallIO, storing your messages and recalling summarized memories relevant to your input.
+This project provides a simple desktop chat application built with Tkinter. It connects to OpenAI and RecallIO, storing your messages and recalling factual knowledge relevant to your input.
 
 ## Setup
 =======
@@ -21,4 +21,4 @@ Start the chat application with:
 ```bash
 python chat_gui.py
 ```
-The top area shows the conversation while the lower panel displays the latest recalled summary from RecallIO.
+The top area shows the conversation while the lower panel displays the latest recalled facts from RecallIO.
