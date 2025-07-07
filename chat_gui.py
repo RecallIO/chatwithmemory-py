@@ -3,6 +3,9 @@ import tkinter as tk
 from tkinter import scrolledtext
 from recallio import RecallioClient, MemoryWriteRequest, MemoryRecallRequest, RecallioAPIError
 import openai
+import time
+
+
 
 CONFIG_FILE = 'config.json'
 
@@ -69,17 +72,20 @@ class ChatApp:
         self.append_chat('You', user_text)
 
         summary_text = ''
+        recall_time = 0
         try:
+            start_time = time.time()
             recall_req = MemoryRecallRequest(
                 projectId=self.project_id,
                 userId=self.user_id,
                 query=user_text,
                 scope='user',
-                summarized=True,
+                summarized=False,
                 similarityThreshold=0.2,
                 limit=10,
             )
             memories = self.recall_client.recall_memory(recall_req)
+            recall_time = time.time() - start_time
             if memories:
                 first = memories[0]
                 summary_text = getattr(first, 'content', '') or getattr(first, 'summary', '')
@@ -89,11 +95,11 @@ class ChatApp:
             self.append_chat('Error', f'RecallIO recall failed: {e}')
             return
         if summary_text:
-            self.update_recall(summary_text)
+            self.update_recall(f"[Recall time: {recall_time:.3f}s] {summary_text}")
 
         messages = []
         if summary_text:
-            messages.append({'role': 'system', 'content': f'Recalled Summary: {summary_text}'})
+            messages.append({'role': 'system', 'content': f'This is what you know about the user: {summary_text}'})
         messages.append({'role': 'user', 'content': user_text})
 
         try:
