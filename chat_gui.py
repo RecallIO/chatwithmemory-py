@@ -85,9 +85,7 @@ class ChatApp:
                 userId=self.user_id,
                 query=user_text,
                 scope='user',
-                summarized=False,
-                similarityThreshold=0.2,
-                limit=10,
+                similarityThreshold=0.2
             )
             memories = self.recall_client.recall_memory(recall_req)
             recall_time = time.time() - start_time
@@ -97,7 +95,8 @@ class ChatApp:
                     getattr(mem, 'content', '') or getattr(mem, 'summary', '')
                 )
             fact_text = "; ".join(fs for fs in fact_strings if fs)
-        except RecallioAPIError:
+        except RecallioAPIError as e:
+            self.append_chat('Error', f'RecallIO recall failed: {e}')
             fact_text = ''
         except Exception as e:
             self.append_chat('Error', f'RecallIO recall failed: {e}')
