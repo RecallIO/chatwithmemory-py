@@ -84,8 +84,7 @@ class ChatApp:
                 projectId=self.project_id,
                 userId=self.user_id,
                 query=user_text,
-                scope='user',
-                similarityThreshold=0.2
+                scope='user'
             )
             memories = self.recall_client.recall_memory(recall_req)
             recall_time = time.time() - start_time
